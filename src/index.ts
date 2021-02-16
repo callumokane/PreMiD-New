@@ -10,4 +10,6 @@ const client = new PreMiD({
 
 client.login();
 
-export {client};
+let db = client.db;
+
+export {client, db};

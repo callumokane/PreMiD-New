@@ -1,3 +1,6 @@
+import axios from "axios";
+import chalk from "chalk";
+
 import { Client, Collection, MessageEmbed } from "discord.js";
 import { connect, Db, MongoClient } from "mongodb";
 
@@ -9,6 +12,8 @@ import * as Methods from '../Methods';
 export class PreMiD extends Client {
     readonly logger = Methods.createLogger();
     readonly config = require("../../config");
+
+    fetch = (url: string, options?: object) => axios(url, options).catch(e => console.log(`${chalk.bgMagenta(` AXIOS `)} ${e}`));
 
     info = this.logger.info;
     debug = this.logger.debug;
