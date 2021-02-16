@@ -16,12 +16,7 @@ module.exports = {
 
             let args = msg.content.replace(prefix, "").split(" ").slice(1),
                 input = msg.content.replace(prefix, "").split(" ")[0].toLowerCase(),
-                cmd = client.commands.get(input) || client.aliases.get(input),
-                member = client.guilds.cache.get(client.config.main_guild).member(msg.author.id);
-
-            if(!cmd || !member || !member._roles.includes(client.config.roles.beta)) return;
-            if(cmd.config.permissions.staff && !member._roles.includes(client.config.roles.worker)) return msg.react("⚠");
-            if(cmd.config.permissions.developer && !member._roles.includes(client.config.roles.developer)) return msg.react("⚠");
+                cmd = client.commands.get(input) || client.aliases.get(input);
             
             try {
                 await cmd.run(client as Client, msg as Message, args as string[]);
