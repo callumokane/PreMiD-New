@@ -1,0 +1,12 @@
+{
+	"compilerOptions": {
+        "skipLibCheck": true,
+		"target": "ESNext",
+		"module": "CommonJS",
+        "outDir": "dist",
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"strict": false
+    },
+    "include": ["src"]
+}
