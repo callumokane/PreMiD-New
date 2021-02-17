@@ -1,9 +1,9 @@
 import moment from "moment";
 
 import { GuildMember, Message, TextChannel } from "discord.js";
-import {client, db} from "../../../";
+import { client } from "../../../";
 
-let coll = db.collection("tickets");
+let db = client.db, coll = db.collection("tickets");
 
 export class Ticket {
     id: string;
@@ -26,6 +26,8 @@ export class Ticket {
         for (const key of Object.keys(ticket)) this[key] = ticket[key];
 
         this.id = ticket.ticketId;
+
+        return true;
     }
 
     async create(message: Message) {
@@ -33,12 +35,9 @@ export class Ticket {
             ticketId = (ticketCount++).toString().padStart(5, "0"),
             attachments = [];
 
-            for(const attachment in message.attachments) {
-                client.fetch("some image uploader api we make ok yes sexy", {
-                    headers: {}, 
-                    body: {}
-                })
-            }
+            for(const attachment in message.attachments)
+                this.attachImage(attachment);
+
 
             //wip
     }
@@ -49,7 +48,10 @@ export class Ticket {
     close() {}
     addSupporter() {}
     removeSupporter() {}
-    attachImage() {}
+    
+    attachImage(attachment) {
+        // Need a CDN for images before complete.
+    }
 
     addLog(input: string) {
         coll.findOneAndUpdate({id: this.id}, {$push: {logs: `[${moment(new Date()).format("DD/MM/YY LT")} (${Date().split("(")[1].replace(")", "").match(/[A-Z]/g).join("")})] ${input}`}})

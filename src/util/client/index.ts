@@ -10,6 +10,8 @@ import * as Interfaces from '../interfaces';
 import * as Methods from '../Methods';
 
 export class PreMiD extends Client {
+    moduleCount: Number;
+
     readonly logger = Methods.createLogger();
     readonly config = require("../../config");
 
@@ -30,7 +32,6 @@ export class PreMiD extends Client {
     Embed = MessageEmbed;
     
     constructor(options?: Partial<Interfaces.Options>) { super(options); }
-
 
     async initDatabase() {
         this.debug("Database... connecting");
@@ -57,7 +58,7 @@ export class PreMiD extends Client {
 
         await loadCommands(this);
         await loadEvents(this);
-
+        this.info(`Loading modules (${this.moduleCount})`)
         this.info(`Loaded commands (${this.commands.size})`);
 		this.info(`Loaded events (${this.events.size})`);
 
