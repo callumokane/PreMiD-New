@@ -10,14 +10,14 @@ module.exports = {
             let prefix = msg.content.match(new RegExp(`^<@!?${client.user.id}> `))
                 ? msg.content.match(new RegExp(`^<@!?${client.user.id}> `))[0]
                 : msg.content.toLowerCase().startsWith(inp.toLowerCase()) 
-                ? inp : null,
-            perms = await msg.client.elevation(client, msg.author.id);
+                ? inp : null;
 
             if(!prefix) return;
 
             let args = msg.content.replace(prefix, "").split(" ").slice(1),
                 input = msg.content.replace(prefix, "").split(" ")[0].toLowerCase(),
-                cmd = client.commands.get(input) || client.aliases.get(input);
+                cmd = client.commands.get(input) || client.aliases.get(input),
+                perms = await msg.client.elevation(client, msg.author.id);
 
                 if (!cmd || (cmd.config.slashCommand && !process.argv.includes("--dev")) || (client.user.id == "574233163660918784" && msg.guild.id == "493130730549805057")) return;
                 if (typeof cmd.config.permLevel != "undefined" && perms < cmd.config.permLevel) return msg.react("⚠");

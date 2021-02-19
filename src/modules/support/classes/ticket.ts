@@ -27,6 +27,8 @@ export class Ticket {
     messageContent: string;
     supporters: GuildMember[];
 
+    constructor() {};
+
     async fetch(filter: "ticket" | "author" | "id" | "channel" | "message", input: string | Message | TextChannel) {
         let ticket: any;
 
@@ -224,7 +226,7 @@ export class Ticket {
         let logs = (await coll.findOne({ticketId: this.id})).logs;
         logs.push(`[${moment(new Date()).format("DD/MM/YY LT")} (${Date().split("(")[1].replace(")", "").match(/[A-Z]/g).join("")})] [CLOSED] Ticket closed by ${closer.tag}`);
 
-        await writeFile(`${process.cwd()}/TicketLogs/${this.id}.txt`, logs.join("\n")).then(async _ => {
+        writeFile(`${process.cwd()}/TicketLogs/${this.id}.txt`, logs.join("\n")).then(async _ => {
             let user = client.users.cache.get(this.userId);
             if(user) user.send(`Your ticket (\`${this.id}\`) has been closed by <@${closer.id}>. (Reason: ${reason || "\`Not Specified\`"})`, {
                 files: [
@@ -254,7 +256,7 @@ export class Ticket {
                         },
                         {
                             name: "Closer",
-                            value: `<@${closer.id}> (Reason: \`${reason || "Not Specified"}\`)`,
+                            value: `<@${closer.id}> (Reason: \`${reason.length > 2 ? reason : "Not Specified"}\`)`,
                             inline: true
                         },
                         {

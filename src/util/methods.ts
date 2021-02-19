@@ -7,6 +7,7 @@ export const createLogger = () => new class Logger {
 }
 
 export const elevation = async(client, userId) => {
+	console.log(userId)
     enum PermLevel {
         DEFAULT = 0,
         SUPPORT = 1,
