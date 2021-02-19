@@ -1,12 +1,10 @@
 import moment from "moment";
 import axios from "axios";
-import path from "path";
 import FormData from "form-data";
 import rimraf from "rimraf";
 
 import { CategoryChannel, GuildMember, Message, OverwriteResolvable, TextChannel, WebhookClient } from "discord.js";
-import { createWriteStream, writeFileSync } from "fs";
-import { writeFile } from "fs/promises";
+import { writeFileSync } from "fs";
 import { client } from "../../../";
 import { getVars, sortTickets } from "../methods";
 
@@ -50,7 +48,7 @@ export class Ticket {
         return true;
     }
 
-    async create(message: Message, confirmed=false) {
+    async create(message: Message, confirmed=false, attachments, ticketId) {
         (client.channels.cache.get(client.config.channels.supportChannel) as TextChannel).updateOverwrite(message.member, {
             SEND_MESSAGES: false
         });
@@ -66,6 +64,7 @@ export class Ticket {
                     description: `Before your ticket is created, please have a look through our support guide to see if it can help with your issue!\nhttps://docs.premid.app/troubleshooting\n\n**Continue creating ticket?**`
                 }
             });
+            
 
             msg.react("521018476870107156").then(_ => msg.react("❌"));
 
@@ -74,7 +73,7 @@ export class Ticket {
 
             create.on("collect", _ => {
                 msg.delete();
-                this.create(message, true);
+                this.create(message, true, attachments, ticketId);
             });
 
             cancel.on("collect", _ => msg.delete())
@@ -82,16 +81,8 @@ export class Ticket {
             client.ttCount = client.ttCount ? Number(client.ttCount) + 1 : 1;
             setTimeout(() => client.ttCount = Number(client.ttCount) - 1, 60000);
             if(client.ttCount > 5) return (await message.reply("we have had more than 5 tickets created in the last minute, please try again in one minute! This is to reduce spam. You have been DMed your message content so you do not need to retype it all out.")).delete({timeout: 20000});            
-            let ticketCount = await coll.countDocuments({}),
-                ticketId = (ticketCount++).toString().padStart(5, "0"),
-                attachments = [],
-                mAttachments = message.attachments.map(x => x);
 
             this.id = ticketId;
-
-            for await (const attachment of mAttachments)
-                attachments.push(await this.attachImage(attachment));
-
 
             let embed = {
                     author: {
@@ -115,18 +106,20 @@ export class Ticket {
 
             message.author.send(`Your ticket (\`${ticketId}\`) has been submitted!`);
                 
-            coll.insertOne({
-                status: 3,
-                ticketId: this.id,
-                userId: message.author.id,
-                messageContent: message.content,
-                ticketMessage: tMsg.id,
-                timestamp: Date.now(),
-                attachments: attachments,
-                created: Date.now(),
-                logs: [
-                    `[${moment(new Date()).format("DD/MM/YY LT")} (${Date().split("(")[1].replace(")", "").match(/[A-Z]/g).join("")})] [TICKET CREATED] Awaiting supporter!`
-                ]
+            coll.findOneAndUpdate({ticketId: ticketId}, {
+                $set: {
+                    status: 3,
+                    ticketId: this.id,
+                    userId: message.author.id,
+                    messageContent: message.content,
+                    ticketMessage: tMsg.id,
+                    timestamp: Date.now(),
+                    attachments: attachments,
+                    created: Date.now(),
+                    logs: [
+                        `[${moment(new Date()).format("DD/MM/YY LT")} (${Date().split("(")[1].replace(")", "").match(/[A-Z]/g).join("")})] [TICKET CREATED] Awaiting supporter!`
+                    ]
+                }
             })
         }
     }
@@ -205,7 +198,7 @@ export class Ticket {
             }
         };
         
-        if(this.attachments.length > 0) embed.fields.push({name: "Attachments", value: this.attachments.map(x => `[${x.name}](${x.url})`).join(", "), inline: true});
+        if(this.attachments.length > 0) embed.fields.push({name: "Attachments", value: this.attachments.map(x => `[${x.name}](${x.link})`).join(", "), inline: true});
 
         (await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string)).edit({embed});
 
@@ -227,7 +220,7 @@ export class Ticket {
         await writeFileSync(`${process.cwd()}/TicketLogs/${this.id}.txt`, logs.join("\n"));
 
         let user = client.users.cache.get(this.userId);
-        if(user) user.send(`Your ticket (\`${this.id}\`) has been closed by <@${closer.id}>. (Reason: \`${reason.length > 2 ? reason : "Not Specified"}\`"})`, {
+        if(user) user.send(`Your ticket (\`${this.id}\`) has been closed by <@${closer.id}>. (Reason: \`${reason.length > 2 ? reason : "\`Not Specified\`"})`, {
             files: [
                 {
                     attachment: `${process.cwd()}/TicketLogs/${this.id}.txt`,
@@ -236,7 +229,9 @@ export class Ticket {
             ]
         });
 
-        (await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string)).delete();
+        let msg = (await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string));
+        msg.delete();
+        (msg.channel as TextChannel).permissionOverwrites.get(this.user.id)?.delete();
         client.channels.cache.get(this.supportChannel).delete();
 
         coll.findOneAndUpdate({ticketId: this.id}, {$set: {status: 3}});
@@ -278,18 +273,18 @@ export class Ticket {
                 ]
             })
 
-            rimraf(`${process.cwd()}/TicketLogs/${this.id}.txt`, () => {});
+            setTimeout(() => rimraf(`${process.cwd()}/TicketLogs/${this.id}.txt`, () => {}), 20000);
     }
 
-    async addSupporter(msg: Message, args) {
-        let user = msg.mentions.users.first() || client.users.cache.get(args[0]) || msg.guild.members.cache.find(m => m.user.username.toLowerCase() == args[0].toLowerCase());
+    async addSupporter(msg: Message, args, self?) {
+        let user = self ? msg.author : msg.mentions.users.first() || client.users.cache.get(args[0]) || msg.guild.members.cache.find(m => m.user.username.toLowerCase() == args[0].toLowerCase());
 
         if(!user) return msg.reply("I could not find that member.");
         
         if(await coll.findOne({ticketId: this.id, supporters: user.id})) return msg.reply("that member is already added to this ticket.");
 
-        msg.channel.send(`**>>** ${msg.author} has added ${user.toString()}`);
-        msg.delete();
+        msg.channel.send(`**>>** ${msg.author} ${self ? "" : `has added ${user.toString()}`}`);
+        if(!self) msg.delete();
 
         (msg.channel as TextChannel).updateOverwrite(user.id, {
             VIEW_CHANNEL: true,
@@ -308,13 +303,13 @@ export class Ticket {
     }
 
     async removeSupporter(msg, args) {
-        let user = msg.mentions.users.first() || client.users.cache.get(args[0]) || msg.guild.members.cache.find(m => m.user.username.toLowerCase() == args[0].toLowerCase());
+        let user = msg.mentions.users.first() || client.users.cache.get(args[0]) || msg.guild.members.cache.find(m => m.user.username.toLowerCase() == args[0].toLowerCase()) || msg.author;
 
         if(!user) return msg.reply("I could not find that member.");
         
         if(!await coll.findOne({ticketId: this.id, supporters: user.id})) return msg.reply("that member is not in this ticket.");
 
-        msg.channel.send(`**<<** ${msg.author} has removed ${user.toString()}`);
+        msg.channel.send(`**<<** ${msg.author} has ${msg.author.id == user.id ? "removed themselves from the ticket." : `removed ${user.toString()}`}`);
         msg.delete();
 
         (msg.channel as TextChannel).updateOverwrite(user.id, {
@@ -343,17 +338,16 @@ export class Ticket {
     }
 
     async attachImage(attachment) {
-        let data = new FormData();
-
-        data.append("file", (await axios(attachment.proxyURL, { responseType: "stream" })).data.pipe(createWriteStream(path.resolve(__dirname, attachment.name))));
-
-        await axios.post(`https://cdn.rcd.gg/ticket/${this.id}/${attachment.name}`, data, {
+        let data = new FormData(), imgId = Math.floor(Math.random() * 99) * 99;
+        data.append("file", (await axios({url: attachment.proxyURL, method: "GET", responseType: "stream"})).data);
+        await axios.post(`https://cdn.rcd.gg/${imgId}/${attachment.name}`, data, {
             headers: {
+                ...data.getHeaders(),
                 "Content-Type": "multipart/form-data",
                 authorization: process.env.AUTH_CDN
             }
-        })
-        return {name: attachment.name, link: `https://cdn.rcd.gg/ticket/${this.id}/${attachment.name}`};
+        });
+        return {name: attachment.name, link: `https://cdn.rcd.gg/${imgId}/${attachment.name}`};
     }
 
     addLog(input: string) {
