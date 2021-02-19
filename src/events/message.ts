@@ -19,7 +19,7 @@ module.exports = {
                 input = msg.content.replace(prefix, "").split(" ")[0].toLowerCase(),
                 cmd = client.commands.get(input) || client.aliases.get(input);
 
-                if (!cmd || (cmd.config.slashCommand && !process.argv.includes("--dev")) || (client.user.id == "574233163660918784" && msg.guild.id == "493130730549805057")) return msg.reply("aadas");
+                if (!cmd || (cmd.config.slashCommand && !process.argv.includes("--dev")) || (client.user.id == "574233163660918784" && msg.guild.id == "493130730549805057")) return;
                 if (typeof cmd.config.permLevel != "undefined" && perms < cmd.config.permLevel) return msg.react("⚠");
 
             try {

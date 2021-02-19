@@ -9,14 +9,8 @@ interface Command {
     config: {
         name: string;
         aliases: string[];
-        category: string;
-        description: string;
-        permissions: {
-            ticketSupporter: boolean;
-            manager: boolean;
-            developer: boolean;
-        }
-    };
+        slashCommand: boolean;
+    }
     run(client: Client, message: Message, aliases: string[]): void;
 }
 

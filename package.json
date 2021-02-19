@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node dist/index",
-    "compile": "yarn --silent && rimraf dist && tsc && echo \"Finished Compiling... Starting...\"",
+    "compile": "yarn --silent && rimraf dist && tsc",
     "quick": "yarn compile && yarn start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -14,8 +14,10 @@
     "chalk": "^4.1.0",
     "discord.js": "^12.5.1",
     "dotenv": "^8.2.0",
+    "form-data": "^4.0.0",
     "moment": "^2.29.1",
-    "mongodb": "^3.6.3"
+    "mongodb": "^3.6.3",
+    "request": "^2.88.2"
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",

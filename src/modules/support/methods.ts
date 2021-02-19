@@ -1,4 +1,4 @@
-import { CategoryChannel } from "discord.js";
+import { CategoryChannel, TextChannel } from "discord.js";
 import { client } from "../../";
 import { Ticket } from "./classes/ticket";
 
@@ -42,6 +42,11 @@ export const checkOldTickets = async () => {
     for(let i = 0; i < ticketTC.length; i++) {
         let ticket = new Ticket();
         if(await ticket.fetch("channel", ticketsNN[i].supportChannel))
-            ticket.close()
+            ticket.close(client.user, "No response for 7 days.")
     }
+}
+
+export const getVars = url => {
+	let regexp = /^https:\/\/discord(app)?\.com\/api\/webhooks\/(\d{18})\/([\w-]{1,})$/;
+	return { id: regexp.exec(url)[2], token: regexp.exec(url)[3] };
 }

@@ -11,23 +11,22 @@ import * as Methods from '../Methods';
 
 export class PreMiD extends Client {
     moduleCount: Number;
-
+    ttCount: Number;
+    db: Db;
+    database: Promise<MongoClient>;
+    
     readonly logger = Methods.createLogger();
     readonly config = require("../../config");
 
-    fetch = (url: string, options?: object) => axios(url, options).catch(e => console.log(`${chalk.bgMagenta(` AXIOS `)} ${e}`));
-
-    info = this.logger.info;
-    debug = this.logger.debug;
-    error = this.logger.error;
-    success = this.logger.success;
-
-    db: Db;
-    database: Promise<MongoClient>;
-
-    commands = new Collection<string, Interfaces.Command>();
-    aliases = new Collection<string, Interfaces.Command>();
-    events = new Collection<string, Interfaces.Event>();
+    fetch       = (url: string, options?: object) => axios(url, options).catch(e => console.log(`${chalk.bgMagenta(` AXIOS `)} ${e}`));
+    info        = this.logger.info;
+    debug       = this.logger.debug;
+    error       = this.logger.error;
+    success     = this.logger.success;
+    
+    commands    = new Collection<string, Interfaces.Command>();
+    aliases     = new Collection<string, Interfaces.Command>();
+    events      = new Collection<string, Interfaces.Event>();
 
     Embed = MessageEmbed;
     
@@ -58,6 +57,7 @@ export class PreMiD extends Client {
 
         await loadCommands(this);
         await loadEvents(this);
+
         this.info(`Loading modules (${this.moduleCount})`)
         this.info(`Loaded commands (${this.commands.size})`);
 		this.info(`Loaded events (${this.events.size})`);

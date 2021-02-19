@@ -4,7 +4,7 @@ const modules = readdirSync(`${process.cwd()}/dist/modules/`, {withFileTypes: tr
 
 export const loadEvents = async (client) => {
     client.moduleCount = modules.length;
-    modules.forEach(async module => {
+    modules.forEach(module => {
         let eventsPath = `${module}/events/`;
         if(existsSync(eventsPath)) 
             readdirSync(eventsPath).filter(x => x.endsWith(".js"))
@@ -18,8 +18,8 @@ export const loadEvents = async (client) => {
     readdirSync(`${process.cwd()}/dist/events/`).filter(x => x.endsWith(".js"))
     .forEach(file => {
         let event = require(`${process.cwd()}/dist/events/${file}`);
-        client.events.set(event.name, event);
-        client.on(event.name+Math.random(), (...args) => event.run(client, ...args));
+        client.events.set(event.name+Math.random(), event);
+        client.on(event.name, (...args) => event.run(client, ...args));
     });
 
     return true;
