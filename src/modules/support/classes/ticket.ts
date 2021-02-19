@@ -5,7 +5,7 @@ import FormData from "form-data";
 import rimraf from "rimraf";
 
 import { CategoryChannel, GuildMember, Message, OverwriteResolvable, TextChannel, WebhookClient } from "discord.js";
-import { createWriteStream } from "fs";
+import { createWriteStream, writeFileSync } from "fs";
 import { writeFile } from "fs/promises";
 import { client } from "../../../";
 import { getVars, sortTickets } from "../methods";
@@ -23,11 +23,10 @@ export class Ticket {
     acceptedAt: string;
     channel: TextChannel;
     ticketMessage: String;
+    supportMessage: string;
     supportChannel: string;
     messageContent: string;
     supporters: GuildMember[];
-
-    constructor() {};
 
     async fetch(filter: "ticket" | "author" | "id" | "channel" | "message", input: string | Message | TextChannel) {
         let ticket: any;
@@ -56,8 +55,6 @@ export class Ticket {
         });
 
         if(!confirmed) {
-            message.delete();
-
             let msg = await message.author.send({
                 embed: {
                     author: {
@@ -214,78 +211,137 @@ export class Ticket {
         embed.fields = embed.fields.filter(x => x.name != "Channel");
         embed.footer = { text: "/ticket close - closes the ticket.", iconURL: this.user.user.displayAvatarURL({ size: 128 }) };
         
-        channel.send({embed});
+        let msg = await channel.send({embed});
         channel.send(`${this.user.toString()}, your ticket has been accepted by ${member.toString()}`);
 
 		this.addLog(`[ACCEPTED] Ticket accepted by ${this.user.user.tag}`);
         sortTickets();
-        coll.findOneAndUpdate({ticketId: this.id}, {$set: {status: 2, supportChannel: channel.id, supporters: [member.id], acceptedAt: Date.now()}});
+        coll.findOneAndUpdate({ticketId: this.id}, {$set: {status: 2, supportChannel: channel.id, supporters: [member.id], acceptedAt: Date.now(), supportMessage: msg.id}});
     }
 
     async close(closer, reason?) {
         let logs = (await coll.findOne({ticketId: this.id})).logs;
         logs.push(`[${moment(new Date()).format("DD/MM/YY LT")} (${Date().split("(")[1].replace(")", "").match(/[A-Z]/g).join("")})] [CLOSED] Ticket closed by ${closer.tag}`);
+        
+        await writeFileSync(`${process.cwd()}/TicketLogs/${this.id}.txt`, logs.join("\n"));
 
-        writeFile(`${process.cwd()}/TicketLogs/${this.id}.txt`, logs.join("\n")).then(async _ => {
-            let user = client.users.cache.get(this.userId);
-            if(user) user.send(`Your ticket (\`${this.id}\`) has been closed by <@${closer.id}>. (Reason: \`${reason.length > 2 ? reason : "Not Specified"}\`"})`, {
+        let user = client.users.cache.get(this.userId);
+        if(user) user.send(`Your ticket (\`${this.id}\`) has been closed by <@${closer.id}>. (Reason: \`${reason.length > 2 ? reason : "Not Specified"}\`"})`, {
+            files: [
+                {
+                    attachment: `${process.cwd()}/TicketLogs/${this.id}.txt`,
+                    name: `Ticket-${this.id}.txt`
+                }
+            ]
+        });
+
+        (await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string)).delete();
+        client.channels.cache.get(this.supportChannel).delete();
+
+        coll.findOneAndUpdate({ticketId: this.id}, {$set: {status: 3}});
+
+        let vars = getVars(process.env.TICKETLOGSWEBHOOK),
+            webhook = new WebhookClient(vars.id, vars.token),
+            embed = new client.Embed()
+                .setAuthor(`#${this.id}`, "https://github.com/PreMiD/Discord-Bot/blob/main/.discord/red_circle.png?raw=true")
+                .setColor("#b52222")
+                .setDescription(this.messageContent)
+                .addFields([
+                    {
+                        name: "Creator",
+                        value: `<@${this.userId}>`,
+                        inline: true
+                    },
+                    {
+                        name: "Closer",
+                        value: `<@${closer.id}> (Reason: \`${reason.length > 2 ? reason : "Not Specified"}\`)`,
+                        inline: true
+                    },
+                    {
+                        name: "Supporters",
+                        value: `${this.supporters.map(x => `<@${x}>`)}`,
+                        inline: true
+                    }
+                ])
+                .setFooter(`Chat lasted ${moment.duration(moment(Date.now()).diff(moment(this.acceptedAt))).humanize()}`, client.user.avatarURL());
+
+            if(this.attachments.length > 0) embed.addField("Attachments", this.attachments.map(x => `[${x.name}](${x.url})`).join(", "));
+
+            webhook.send("", {
+                embeds: [embed],
                 files: [
                     {
                         attachment: `${process.cwd()}/TicketLogs/${this.id}.txt`,
                         name: `Ticket-${this.id}.txt`
                     }
                 ]
-            });
-    
-            (await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string)).delete();
-            client.channels.cache.get(this.supportChannel).delete();
-    
-            coll.findOneAndUpdate({ticketId: this.id}, {$set: {status: 3}});
-    
-            let vars = getVars(process.env.TICKETLOGSWEBHOOK),
-                webhook = new WebhookClient(vars.id, vars.token),
-                embed = new client.Embed()
-                    .setAuthor(`#${this.id}`, "https://github.com/PreMiD/Discord-Bot/blob/main/.discord/red_circle.png?raw=true")
-                    .setColor("#b52222")
-                    .setDescription(this.messageContent)
-                    .addFields([
-                        {
-                            name: "Creator",
-                            value: `<@${this.userId}>`,
-                            inline: true
-                        },
-                        {
-                            name: "Closer",
-                            value: `<@${closer.id}> (Reason: \`${reason.length > 2 ? reason : "Not Specified"}\`)`,
-                            inline: true
-                        },
-                        {
-                            name: "Supporters",
-                            value: `${this.supporters.map(x => `<@${x}>`)}`,
-                            inline: true
-                        }
-                    ])
-                    .setFooter(`Chat lasted ${moment.duration(moment(Date.now()).diff(moment(this.acceptedAt))).humanize()}`, client.user.avatarURL());
-    
-                if(this.attachments.length > 0) embed.addField("Attachments", this.attachments.map(x => `[${x.name}](${x.url})`).join(", "));
-    
-                webhook.send("", {
-                    embeds: [embed],
-                    files: [
-                        {
-                            attachment: `${process.cwd()}/TicketLogs/${this.id}.txt`,
-                            name: `Ticket-${this.id}.txt`
-                        }
-                    ]
-                })
+            })
 
-                rimraf(`${process.cwd()}/TicketLogs/${this.id}.txt`, () => {});
-        })
+            rimraf(`${process.cwd()}/TicketLogs/${this.id}.txt`, () => {});
     }
 
-    addSupporter() {}
-    removeSupporter() {}
+    async addSupporter(msg: Message, args) {
+        let user = msg.mentions.users.first() || client.users.cache.get(args[0]) || msg.guild.members.cache.find(m => m.user.username.toLowerCase() == args[0].toLowerCase());
+
+        if(!user) return msg.reply("I could not find that member.");
+        
+        if(await coll.findOne({ticketId: this.id, supporters: user.id})) return msg.reply("that member is already added to this ticket.");
+
+        msg.channel.send(`**>>** ${msg.author} has added ${user.toString()}`);
+        msg.delete();
+
+        (msg.channel as TextChannel).updateOverwrite(user.id, {
+            VIEW_CHANNEL: true,
+            SEND_MESSAGES: true,
+            EMBED_LINKS: true,
+            ATTACH_FILES: true,
+            USE_EXTERNAL_EMOJIS: true
+        })
+
+        coll.findOneAndUpdate({ticketId: this.id}, {$push: {supporters: user.id}});
+
+        this.updateSupportersEmbed(await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string));
+        this.updateSupportersEmbed(await msg.channel.messages.fetch(this.supportMessage as string));
+
+        this.addLog(`[SUPPORTER ADDED] ${user.toString()} has been added by ${msg.author.toString()}`);
+    }
+
+    async removeSupporter(msg, args) {
+        let user = msg.mentions.users.first() || client.users.cache.get(args[0]) || msg.guild.members.cache.find(m => m.user.username.toLowerCase() == args[0].toLowerCase());
+
+        if(!user) return msg.reply("I could not find that member.");
+        
+        if(!await coll.findOne({ticketId: this.id, supporters: user.id})) return msg.reply("that member is not in this ticket.");
+
+        msg.channel.send(`**<<** ${msg.author} has removed ${user.toString()}`);
+        msg.delete();
+
+        (msg.channel as TextChannel).updateOverwrite(user.id, {
+            VIEW_CHANNEL: false,
+            SEND_MESSAGES: false,
+            EMBED_LINKS: false,
+            ATTACH_FILES: false,
+            USE_EXTERNAL_EMOJIS: false
+        })
+
+        coll.findOneAndUpdate({ticketId: this.id}, {$pull: {supporters: user.id}});
+
+        this.updateSupportersEmbed(await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string));
+        this.updateSupportersEmbed(await msg.channel.messages.fetch(this.supportMessage as string));
+
+        this.addLog(`[SUPPORTER REMOVED] ${user.toString()} has been added by ${msg.author.toString()}`);
+    }
     
+    async updateSupportersEmbed(msg) {
+        let embed = msg.embeds[0],
+            fields = embed.fields.filter(x => !x.name.includes("Supporter"));
+        
+        fields.push({name: "Supporter(s)", value: (await coll.findOne({ticketId: this.id})).supporters.map(x => `<@${x}>`).join(", "), inline: true});
+        
+        embed.fields = fields;
+        msg.edit(embed);
+    }
+
     async attachImage(attachment) {
         let data = new FormData();
 

@@ -15,5 +15,13 @@ module.exports = {
             let ticket = new Ticket();
             ticket.create(msg, false);
         }
+        let ticket = new Ticket();
+        if (!(await ticket.fetch("channel", msg.channel.id))) return;
+
+        ticket.addLog(`[MESSAGE] ${msg.author.tag}: ${msg.content}`);
+
+        if(!ticket) return; 
+        if(msg.content.startsWith(">>")) ticket.addSupporter(msg, msg.content.replace(">>", "").split(" "));
+        if(msg.content.startsWith("<<")) ticket.removeSupporter(msg, msg.content.replace(">>", "").split(" "));
     }
 }
