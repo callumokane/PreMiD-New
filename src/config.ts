@@ -1,5 +1,6 @@
 module.exports = {
     main_guild: "493130730549805057",
+    supportCategory: "811631193309052939",
     roles: {
         translator: "502148045991968788",
         proofreader: "522755339448483840",

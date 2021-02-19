@@ -36,6 +36,6 @@ export const loadCommands = async (client) => {
                     command.config.aliases.forEach(alias => client.aliases.set(alias, command));
                 })
     })
-    
+
     return true;
 }

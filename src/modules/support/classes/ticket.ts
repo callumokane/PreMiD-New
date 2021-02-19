@@ -22,10 +22,11 @@ export class Ticket {
     attachments: any[];
     acceptedAt: string;
     channel: TextChannel;
-    ticketMessage: String;
+    ticketMessage: string;
     supportMessage: string;
     supportChannel: string;
     messageContent: string;
+    supportTimestamps: number;
     supporters: GuildMember[];
 
     async fetch(filter: "ticket" | "author" | "id" | "channel" | "message", input: string | Message | TextChannel) {
@@ -333,8 +334,7 @@ export class Ticket {
     }
     
     async updateSupportersEmbed(msg) {
-        let embed = msg.embeds[0],
-            fields = embed.fields.filter(x => !x.name.includes("Supporter"));
+        let embed = msg.embeds[0], fields = embed.fields.filter(x => !x.name.includes("Supporter"));
         
         fields.push({name: "Supporter(s)", value: (await coll.findOne({ticketId: this.id})).supporters.map(x => `<@${x}>`).join(", "), inline: true});
         

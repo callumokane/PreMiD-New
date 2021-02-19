@@ -8,12 +8,13 @@ import {loadEvents, loadCommands} from "./module.controller";
 
 import * as Interfaces from '../interfaces';
 import * as Methods from '../Methods';
+import shortInfos from "../../modules/moderation/short-infos";
 
 export class PreMiD extends Client {
+    database: Promise<MongoClient>;
     moduleCount: Number;
     ttCount: Number;
     db: Db;
-    database: Promise<MongoClient>;
     
     readonly logger = Methods.createLogger();
     readonly config = require("../../config");
@@ -23,14 +24,21 @@ export class PreMiD extends Client {
     debug       = this.logger.debug;
     error       = this.logger.error;
     success     = this.logger.success;
-    
+    infos       = new Collection<any, any>();
+    infoAliases = new Collection<any, any>();;
     commands    = new Collection<string, Interfaces.Command>();
     aliases     = new Collection<string, Interfaces.Command>();
     events      = new Collection<string, Interfaces.Event>();
 
     Embed = MessageEmbed;
     
-    constructor(options?: Partial<Interfaces.Options>) { super(options); }
+    constructor(options?: Partial<Interfaces.Options>) { 
+        super(options); 
+        for (let i in shortInfos) {
+            this.infos.set(i, shortInfos[i]);
+            if (shortInfos[i].aliases) shortInfos[i].aliases.forEach((alias: string) => this.infoAliases.set(alias, i));
+        }
+    }
 
     async initDatabase() {
         this.debug("Database... connecting");
