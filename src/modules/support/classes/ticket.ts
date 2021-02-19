@@ -1,6 +1,6 @@
 import moment from "moment";
 import axios from "axios";
-import request from "request";
+import path from "path";
 import FormData from "form-data";
 import rimraf from "rimraf";
 
@@ -228,7 +228,7 @@ export class Ticket {
 
         writeFile(`${process.cwd()}/TicketLogs/${this.id}.txt`, logs.join("\n")).then(async _ => {
             let user = client.users.cache.get(this.userId);
-            if(user) user.send(`Your ticket (\`${this.id}\`) has been closed by <@${closer.id}>. (Reason: ${reason || "\`Not Specified\`"})`, {
+            if(user) user.send(`Your ticket (\`${this.id}\`) has been closed by <@${closer.id}>. (Reason: \`${reason.length > 2 ? reason : "Not Specified"}\`"})`, {
                 files: [
                     {
                         attachment: `${process.cwd()}/TicketLogs/${this.id}.txt`,
@@ -287,13 +287,13 @@ export class Ticket {
     removeSupporter() {}
     
     async attachImage(attachment) {
-        let data = new FormData(), dataa = request(attachment.url).pipe(createWriteStream(attachment.name));
-        console.log(dataa)
-        data.append("file", dataa);
+        let data = new FormData();
+
+        data.append("file", (await axios(attachment.proxyURL, { responseType: "stream" })).data.pipe(createWriteStream(path.resolve(__dirname, attachment.name))));
 
         await axios.post(`https://cdn.rcd.gg/ticket/${this.id}/${attachment.name}`, data, {
             headers: {
-                ...data.getHeaders(),
+                "Content-Type": "multipart/form-data",
                 authorization: process.env.AUTH_CDN
             }
         })

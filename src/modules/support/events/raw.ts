@@ -14,7 +14,8 @@ module.exports = {
         let ticket = new Ticket();
         if (!(await ticket.fetch("message", out.d.message_id))) return;
 
-        let tMsg = await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(out.d.message_id);
+        let tMsg = await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(out.d.message_id) || null;
+        if(!tMsg) return;
 
         if(out.d.emoji.id == "521018476870107156" && ticket.status == 2) ticket.accept(member);
         if(out.d.emoji.name == "🚫") {
