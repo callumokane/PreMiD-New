@@ -203,7 +203,7 @@ export class Ticket {
         (await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string)).edit({embed});
 
         embed.fields = embed.fields.filter(x => x.name != "Channel");
-        embed.footer = { text: "/ticket close - closes the ticket.", iconURL: this.user.user.displayAvatarURL({ size: 128 }) };
+        embed.footer = { text: ">>close - closes the ticket.", iconURL: this.user.user.displayAvatarURL({ size: 128 }) };
         
         let msg = await channel.send({embed});
         channel.send(`${this.user.toString()}, your ticket has been accepted by ${member.toString()}`);
@@ -215,12 +215,12 @@ export class Ticket {
 
     async close(closer, reason?) {
         let logs = (await coll.findOne({ticketId: this.id})).logs;
-        logs.push(`[${moment(new Date()).format("DD/MM/YY LT")} (${Date().split("(")[1].replace(")", "").match(/[A-Z]/g).join("")})] [CLOSED] Ticket closed by ${closer.tag}`);
+        logs.push(`[${moment(new Date()).format("DD/MM/YY LT")} (${Date().split("(")[1].replace(")", "").match(/[A-Z]/g).join("")})] [CLOSED] Ticket closed by ${closer.tag} (Reason: ${reason.length > 2 ? reason : "Not Specified"})`);
         
         await writeFileSync(`${process.cwd()}/TicketLogs/${this.id}.txt`, logs.join("\n"));
 
         let user = client.users.cache.get(this.userId);
-        if(user) user.send(`Your ticket (\`${this.id}\`) has been closed by <@${closer.id}>. (Reason: \`${reason.length > 2 ? reason : "Not Specified"}\`)`, {
+        if(user) user.send(user.id == closer.id ? `You have closed your ticket (\`${this.id}\`)` : `Your ticket (\`${this.id}\`) has been closed by <@${closer.id}>. (Reason: \`${reason.length > 2 ? reason : "Not Specified"}\`)`, {
             files: [
                 {
                     attachment: `${process.cwd()}/TicketLogs/${this.id}.txt`,
@@ -352,14 +352,14 @@ export class Ticket {
             }
         });
 
-        coll.findOneAndUpdate({ticketId: this.id}, {$push: { attachments: {name: attachment.name, link: `https://cdn.rcd.gg/ticket/${this.id}/${imgId}-${attachment.name}`}}})
+        coll.findOneAndUpdate({ticketId: this.id}, {$push: { attachments: {name: `${imgId}-${attachment.name}`, link: `https://cdn.rcd.gg/ticket/${this.id}/${imgId}-${attachment.name}`}}})
 
         if(msg) {
             msg.channel.send(`**>>** ${msg.author} has attached ${attachment.name} (<https://cdn.rcd.gg/ticket/${this.id}/${imgId}-${attachment.name}>)`);
             msg.delete();
             this.updateSupportersEmbed(msg, true)
         }
-        return {name: attachment.name, link: `https://cdn.rcd.gg/ticket/${this.id}/${imgId}-${attachment.name}`};
+        return {name: `${imgId}-${attachment.name}`, link: `https://cdn.rcd.gg/ticket/${this.id}/${imgId}-${attachment.name}`};
     }
 
     addLog(input: string) {
