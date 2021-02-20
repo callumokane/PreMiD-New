@@ -220,7 +220,7 @@ export class Ticket {
         await writeFileSync(`${process.cwd()}/TicketLogs/${this.id}.txt`, logs.join("\n"));
 
         let user = client.users.cache.get(this.userId);
-        if(user) user.send(`Your ticket (\`${this.id}\`) has been closed by <@${closer.id}>. (Reason: \`${reason.length > 2 ? reason : "\`Not Specified\`"})`, {
+        if(user) user.send(`Your ticket (\`${this.id}\`) has been closed by <@${closer.id}>. (Reason: \`${reason.length > 2 ? reason : "Not Specified"}\`)`, {
             files: [
                 {
                     attachment: `${process.cwd()}/TicketLogs/${this.id}.txt`,
@@ -328,30 +328,42 @@ export class Ticket {
         this.addLog(`[SUPPORTER REMOVED] ${user.toString()} has been added by ${msg.author.toString()}`);
     }
     
-    async updateSupportersEmbed(msg) {
-        let embed = msg.embeds[0], fields = embed.fields.filter(x => !x.name.includes("Supporter"));
+    async updateSupportersEmbed(msg, img?) {
+        let embed = img ? (await msg.channel.messages.fetch(this.supportMessage as string)).embeds[0] : msg.embeds[0], fields = embed.fields.filter(x => !x.name.includes(img ? "Attachment" : "Supporter"));
         
-        fields.push({name: "Supporter(s)", value: (await coll.findOne({ticketId: this.id})).supporters.map(x => `<@${x}>`).join(", "), inline: true});
-        
+        if(!img) fields.push({name: "Supporter(s)", value: (await coll.findOne({ticketId: this.id})).supporters.map(x => `<@${x}>`).join(", "), inline: true});
+        else fields.push({name: "Attachments", value: (await coll.findOne({ticketId: this.id})).attachments.map(x => `[${x.name}](${x.link})`).join(", "), inline: true});
         embed.fields = fields;
-        msg.edit(embed);
+        if(img) {
+            (await msg.channel.messages.fetch(this.supportMessage as string)).edit(embed);
+            (await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string)).edit(embed);
+        } else msg.edit(embed);
     }
 
-    async attachImage(attachment) {
-        let data = new FormData(), imgId = Math.floor(Math.random() * 99) * 99;
+    async attachImage(attachment, msg?) {
+        attachment.name = attachment.name.toString();
+        let data = new FormData(), imgId = Math.floor(Math.random() * 99.87) * 103;
         data.append("file", (await axios({url: attachment.proxyURL, method: "GET", responseType: "stream"})).data);
-        await axios.post(`https://cdn.rcd.gg/${imgId}/${attachment.name}`, data, {
+        await axios.post(`https://cdn.rcd.gg/ticket/${this.id}/${imgId}-${attachment.name}`, data, {
             headers: {
                 ...data.getHeaders(),
                 "Content-Type": "multipart/form-data",
                 authorization: process.env.AUTH_CDN
             }
         });
-        return {name: attachment.name, link: `https://cdn.rcd.gg/${imgId}/${attachment.name}`};
+
+        coll.findOneAndUpdate({ticketId: this.id}, {$push: { attachments: {name: attachment.name, link: `https://cdn.rcd.gg/ticket/${this.id}/${imgId}-${attachment.name}`}}})
+
+        if(msg) {
+            msg.channel.send(`**>>** ${msg.author} has attached ${attachment.name} (<https://cdn.rcd.gg/ticket/${this.id}/${imgId}-${attachment.name}>)`);
+            msg.delete();
+            this.updateSupportersEmbed(msg, true)
+        }
+        return {name: attachment.name, link: `https://cdn.rcd.gg/ticket/${this.id}/${imgId}-${attachment.name}`};
     }
 
     addLog(input: string) {
-        coll.findOneAndUpdate({id: this.id}, {$push: {logs: `[${moment(new Date()).format("DD/MM/YY LT")} (${Date().split("(")[1].replace(")", "").match(/[A-Z]/g).join("")})] ${input}`}})
+        coll.findOneAndUpdate({ticketId: this.id}, {$push: {logs: `[${moment(new Date()).format("DD/MM/YY LT")} (${Date().split("(")[1].replace(")", "").match(/[A-Z]/g).join("")})] ${input}`}})
     }
     
     closeWarning() {

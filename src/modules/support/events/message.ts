@@ -38,7 +38,13 @@ module.exports = {
 
         if(!ticket) return; 
         if(!ticket.supporters.includes(msg.author.id) && !msg.content.startsWith(">>") && ticket.userId != msg.author.id) return ticket.addSupporter(msg, [""], true);
-        if(msg.content.startsWith(">>")) ticket.addSupporter(msg, msg.content.replace(">>", "").split(" "));
+        if(msg.content.startsWith(">>")) {
+            if(msg.content.toLowerCase().includes("image"))
+                if(msg.attachments.first()) for await(const attachment of msg.attachments.map(x => x))
+                    ticket.attachImage(attachment, msg);
+                else return msg.reply("please attach an image to your message when using that syntax!");
+            else ticket.addSupporter(msg, msg.content.replace(">>", "").split(" "));
+        }
         if(msg.content.startsWith("<<")) ticket.removeSupporter(msg, msg.content.replace(">>", "").split(" "));
     }
 }
