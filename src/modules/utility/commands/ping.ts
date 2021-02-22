@@ -4,7 +4,7 @@ module.exports = {
         aliases: [],
         slashCommand: true
     },
-    run: (client, message, _, data) => {
+    run: (data, _, client) => {
         let embed = {
             description: `**We** to **Discord** (\`\`${client.ws.ping}\`\`)`,
             color: client.ws.ping < 250
@@ -15,6 +15,5 @@ module.exports = {
         }
 
         if(data) data.channel.send({embed});
-        else message.channel.send({embed});
     }
 }

@@ -16,6 +16,6 @@ module.exports = {
         data["channel"] = client.guilds.resolve(data.guild_id);
         data["member"] = new GuildMember(client, data.member, data.guild);
 
-        cmd.run(data, perms);
+        cmd.run(data, perms, client);
     }
 }

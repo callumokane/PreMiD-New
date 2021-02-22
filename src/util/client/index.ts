@@ -25,7 +25,7 @@ export class PreMiD extends Client {
     error       = this.logger.error;
     success     = this.logger.success;
     infos       = new Collection<any, any>();
-    infoAliases = new Collection<any, any>();;
+    infoAliases = new Collection<any, any>();
     commands    = new Collection<string, Interfaces.Command>();
     aliases     = new Collection<string, Interfaces.Command>();
     events      = new Collection<string, Interfaces.Event>();

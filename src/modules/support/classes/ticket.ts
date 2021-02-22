@@ -76,7 +76,10 @@ export class Ticket {
                 this.create(message, true, attachments, ticketId);
             });
 
-            cancel.on("collect", _ => msg.delete())
+            cancel.on("collect", _ => {
+                (client.channels.cache.get(client.config.channels.supportChannel) as TextChannel).permissionOverwrites.get(this.user.id)?.delete();
+                msg.delete();
+            })
         } else {
             client.ttCount = client.ttCount ? Number(client.ttCount) + 1 : 1;
             setTimeout(() => client.ttCount = Number(client.ttCount) - 1, 60000);
@@ -108,7 +111,7 @@ export class Ticket {
                 
             coll.findOneAndUpdate({ticketId: ticketId}, {
                 $set: {
-                    status: 3,
+                    status: 1,
                     ticketId: this.id,
                     userId: message.author.id,
                     messageContent: message.content,
@@ -126,7 +129,7 @@ export class Ticket {
 
     delete(closer, msg) {
         client.users.cache.get(this.userId).send(`Your ticket (\`${this.id}\`) has been rejected by <@${closer.id}>`);
-        (client.channels.cache.get(client.config.channels.ticketChanel) as TextChannel)
+        (client.channels.cache.get(client.config.channels.supportChannel) as TextChannel).permissionOverwrites.get(this.user.id)?.delete();
         msg.delete();
         coll.findOneAndUpdate({ticketId: this.id}, {$set: {status: 3}});
     }
@@ -203,7 +206,7 @@ export class Ticket {
         (await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string)).edit({embed});
 
         embed.fields = embed.fields.filter(x => x.name != "Channel");
-        embed.footer = { text: ">>close - closes the ticket.", iconURL: this.user.user.displayAvatarURL({ size: 128 }) };
+        embed.footer = { text: ">>help - View ticket commands.", iconURL: this.user.user.displayAvatarURL({ size: 128 }) };
         
         let msg = await channel.send({embed});
         channel.send(`${this.user.toString()}, your ticket has been accepted by ${member.toString()}`);
@@ -229,9 +232,8 @@ export class Ticket {
             ]
         });
 
-        let msg = (await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string));
-        msg.delete();
-        (msg.channel as TextChannel).permissionOverwrites.get(this.user.id)?.delete();
+        (await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string)).delete();
+        (client.channels.cache.get(client.config.channels.supportChannel) as TextChannel).permissionOverwrites.get(this.user.id)?.delete();
         client.channels.cache.get(this.supportChannel).delete();
 
         coll.findOneAndUpdate({ticketId: this.id}, {$set: {status: 3}});
@@ -276,15 +278,17 @@ export class Ticket {
             setTimeout(() => rimraf(`${process.cwd()}/TicketLogs/${this.id}.txt`, () => {}), 20000);
     }
 
-    async addSupporter(msg: Message, args, self?) {
-        let user = self ? msg.author : msg.mentions.users.first() || client.users.cache.get(args[0]) || msg.guild.members.cache.find(m => m.user.username.toLowerCase() == args[0].toLowerCase());
+    async addSupporter(msg: Message, arg, self?) {
+        if(!self) msg.delete();
 
+        let args = [(arg[1] ? arg[1] : arg[0])], user = self ? msg.author : msg.mentions.users.first() || client.users.cache.get(args[0]) || msg.guild.members.cache.find(m => m.user.username.toLowerCase() == args[0].toLowerCase()) || await msg.guild.members.fetch(args[0]);
+
+        if(!self && user.id == msg.author.id) return;
         if(!user) return msg.reply("I could not find that member.");
         
         if(await coll.findOne({ticketId: this.id, supporters: user.id})) return msg.reply("that member is already added to this ticket.");
 
         msg.channel.send(`**>>** ${msg.author} ${self ? "" : `has added ${user.toString()}`}`);
-        if(!self) msg.delete();
 
         (msg.channel as TextChannel).updateOverwrite(user.id, {
             VIEW_CHANNEL: true,
@@ -302,15 +306,18 @@ export class Ticket {
         this.addLog(`[SUPPORTER ADDED] ${user.toString()} has been added by ${msg.author.toString()}`);
     }
 
-    async removeSupporter(msg, args) {
-        let user = msg.mentions.users.first() || client.users.cache.get(args[0]) || msg.guild.members.cache.find(m => m.user.username.toLowerCase() == args[0].toLowerCase()) || msg.author;
+    async removeSupporter(msg, arg) {
+        msg.delete();
 
+        let args = [(arg[1] ? arg[1] : arg[0])], user = msg.mentions.users.first() || client.users.cache.get(args[0]) || msg.guild.members.cache.find(m => m.user.username.toLowerCase() == args[0].toLowerCase()) || await msg.guild.members.fetch(args[0]) || msg.author;
+
+        // if(this.userId == msg.author.id) return msg.reply("only supporters can remove people from the ticket!");
+        if(user.id == this.userId) return msg.reply("you cannot remove the ticket creator!");
         if(!user) return msg.reply("I could not find that member.");
         
         if(!await coll.findOne({ticketId: this.id, supporters: user.id})) return msg.reply("that member is not in this ticket.");
 
         msg.channel.send(`**<<** ${msg.author} has ${msg.author.id == user.id ? "removed themselves from the ticket." : `removed ${user.toString()}`}`);
-        msg.delete();
 
         (msg.channel as TextChannel).updateOverwrite(user.id, {
             VIEW_CHANNEL: false,

@@ -37,15 +37,35 @@ module.exports = {
         ticket.addLog(`[MESSAGE] ${msg.author.tag}: ${msg.content}`);
 
         if(!ticket) return; 
-        if(!ticket.supporters.includes(msg.author.id) && !msg.content.startsWith(">>") && ticket.userId != msg.author.id) return ticket.addSupporter(msg, [""], true);
+
+        if(!ticket.supporters.includes(msg.author.id) && !msg.content.startsWith(">>") && ticket.userId != msg.author.id) ticket.addSupporter(msg, [""], true);
+
+        if(msg.content.toLowerCase().startsWith(">>help")) return msg.channel.send({
+            embed: {
+                author: {
+                    name: "PreMiD Support",
+                    iconURL: client.user.avatarURL()
+                },
+                color: "BLUE",
+                description: `\`>> userId\` - Add a member to the ticket.\n\`<< userId\` -  Remove a member from the ticket. (Supporters only)\n\`>>attach imageUrl/Message attachment\` - Attach an image to the ticket.\n\`>>close reason\` - Close the ticket.`,
+                footer: {
+                    text: `Requested by ${msg.author.tag}`,
+                    iconURL: msg.author.avatarURL()
+                } 
+            }
+        })
+
+        let args = msg.content.replace(">>", "").replace("<<", "").split(" ");
+
         if(msg.content.startsWith(">>")) {
             if(msg.content.toLowerCase().includes("image") || msg.content.toLowerCase().includes("attach"))
                 if(msg.attachments.first()) for await(const attachment of msg.attachments.map(x => x))
                     ticket.attachImage(attachment, msg);
                 else return msg.reply("please attach an image to your message when using that syntax!");
             else if(msg.content.toLowerCase().replace(">>", "").startsWith("close"))
-                ticket.close(msg.author, msg.content.replace(">>", "").replace("close", ""));
+                ticket.close(msg.author, args.slice(1).join(" "));
+            else ticket.addSupporter(msg, args);
         }
-        if(msg.content.startsWith("<<")) ticket.removeSupporter(msg, msg.content.replace(">>", "").split(" "));
+        if(msg.content.startsWith("<<")) ticket.removeSupporter(msg, args);
     }
 }

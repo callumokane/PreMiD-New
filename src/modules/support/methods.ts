@@ -19,7 +19,7 @@ export const sortTickets = async () => {
 
 export const checkOldTickets = async () => {
     let category = client.channels.cache.get(client.config.channels.ticketCat) as CategoryChannel,
-        coll = await db.collection("tickets");
+        coll = db.collection("tickets");
 
     if(!category) return;
 
@@ -49,4 +49,17 @@ export const checkOldTickets = async () => {
 export const getVars = url => {
 	let regexp = /^https:\/\/discord(app)?\.com\/api\/webhooks\/(\d{18})\/([\w-]{1,})$/;
 	return { id: regexp.exec(url)[2], token: regexp.exec(url)[3] };
+}
+
+export const updateTopic = async() => {
+    let coll = client.db.collection("tickets"),
+        total = await coll.countDocuments(),
+        ticketCount = {
+            unclaimed: (await coll.find({status: 1}).toArray()).length,
+            inProgress: (await coll.find({status: 2}).toArray()).length,
+            closed: (await coll.find({status: 3}).toArray()).length
+        };
+
+    (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel)
+        .setTopic(`${ticketCount.unclaimed} unclaimed • ${ticketCount.inProgress} in progress • ${ticketCount.closed} closed • ${total} total`);
 }
