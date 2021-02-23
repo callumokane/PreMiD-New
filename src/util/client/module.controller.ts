@@ -19,7 +19,9 @@ export const loadEvents = async (client) => {
     .forEach(file => {
         let event = require(`${process.cwd()}/dist/events/${file}`);
         client.events.set(event.name+Math.random(), event);
-        client.on(event.name, (...args) => event.run(client, ...args));
+        event.type && event.type != "process"
+            ? client.on(event.name, (...args) => event.run(client, ...args))
+            : process.on(event.name, (...args) => event.run(client, ...args));
     });
 
     return true;

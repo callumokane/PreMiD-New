@@ -2,9 +2,10 @@ import axios from "axios";
 import { Collection } from "discord.js";
 import { client } from "../..";
 
+let langNames = new Collection<string, string>();
+
 export const updateTranslators = async() => {
-    let langNames = new Collection<string, string>(),
-        coll = client.db.collection("crowdin"),
+    let coll = client.db.collection("crowdin"),
         guild = await client.guilds.cache.get(client.config.main_guild).fetch(),
         users = await coll.find(
             { user: { $exists: true }, code: { $exists: false }},
@@ -73,15 +74,17 @@ export const updateTranslators = async() => {
 
         return members;
     }
-
-    async function removeAllTranslatorRoles(member) {
-        let langRoles = member.guild.roles.cache.array().filter(r => langNames.find(ln => ln === r.name)),
-            rolesToRemove = member.roles.cache.filter(r =>
-                typeof langRoles
-                    .concat(member.guild.roles.resolve(client.config.roles.translator), member.guild.roles.resolve(client.config.roles.proofreader))
-                    .find(r1 => r1.id === r.id) !== "undefined"
-            );
-
-        await member.roles.remove(rolesToRemove);
-    }
 }
+
+async function removeAllTranslatorRoles(member) {
+    let langRoles = member.guild.roles.cache.array().filter(r => langNames.find(ln => ln === r.name)),
+        rolesToRemove = member.roles.cache.filter(r =>
+            typeof langRoles
+                .concat(member.guild.roles.resolve(client.config.roles.translator), member.guild.roles.resolve(client.config.roles.proofreader))
+                .find(r1 => r1.id === r.id) !== "undefined"
+        );
+
+    await member.roles.remove(rolesToRemove);
+}
+
+export {removeAllTranslatorRoles};
