@@ -2,7 +2,9 @@ import { CategoryChannel, TextChannel } from "discord.js";
 import { client } from "../../";
 import { Ticket } from "./classes/ticket";
 
-let db = client.db;
+import moment from "moment";
+
+let db = client.db, ticketData = {};
 
 export const sortTickets = async () => {
     let category = client.channels.cache.get(client.config.channels.ticketCat) as CategoryChannel;
@@ -60,6 +62,9 @@ export const updateTopic = async() => {
             closed: (await coll.find({status: 3}).toArray()).length
         };
 
+        if(ticketCount == ticketData) return;
+        ticketData = ticketCount;
+
     (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel)
-        .setTopic(`${ticketCount.unclaimed} unclaimed • ${ticketCount.inProgress} in progress • ${ticketCount.closed} closed • ${total} total`);
+        .setTopic(`${ticketCount.unclaimed} unclaimed • ${ticketCount.inProgress} in progress • ${ticketCount.closed} closed • ${total} total | Last updated: ${moment(new Date()).format("DD/MM/YY LT")} (${Date().split("(")[1].replace(")", "").match(/[A-Z]/g).join("")})`);
 }

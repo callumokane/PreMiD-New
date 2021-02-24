@@ -45,6 +45,8 @@ export class Ticket {
         this.tMsg = await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(ticket.messageMessage);
         this.user = await client.guilds.cache.get(client.config.main_guild).members.fetch(this.userId);
 
+        if(ticket.channel) this.channel = client.channels.cache.get(ticket.channel) as TextChannel;
+        
         return true;
     }
 
@@ -213,7 +215,7 @@ export class Ticket {
 
 		this.addLog(`[ACCEPTED] Ticket accepted by ${this.user.user.tag}`);
         sortTickets();
-        coll.findOneAndUpdate({ticketId: this.id}, {$set: {status: 2, supportChannel: channel.id, supporters: [member.id], acceptedAt: Date.now(), supportMessage: msg.id}});
+        coll.findOneAndUpdate({ticketId: this.id}, {$set: {status: 2, channel: channel, supportChannel: channel.id, supporters: [member.id], acceptedAt: Date.now(), supportMessage: msg.id}});
     }
 
     async close(closer, reason?) {
@@ -379,8 +381,3 @@ export class Ticket {
         coll.findOneAndUpdate({ticketId: this.id}, {$set: {ticketCloseWarning: Date.now()}});
     }
 }
-
-//statuses
-//1 - pending supporter
-//2 - chat open, ticket in progress
-//3 - ticket closed
