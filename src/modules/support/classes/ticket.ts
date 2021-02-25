@@ -305,7 +305,7 @@ export class Ticket {
         this.updateSupportersEmbed(await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string));
         this.updateSupportersEmbed(await msg.channel.messages.fetch(this.supportMessage as string));
 
-        this.addLog(`[SUPPORTER ADDED] ${user.toString()} has been added by ${msg.author.toString()}`);
+        this.addLog(`[SUPPORTER ADDED] ${client.users.cache.get(user.id).tag} has been added by ${msg.author.tag}`);
     }
 
     async removeSupporter(msg, arg) {
@@ -334,7 +334,7 @@ export class Ticket {
         this.updateSupportersEmbed(await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string));
         this.updateSupportersEmbed(await msg.channel.messages.fetch(this.supportMessage as string));
 
-        this.addLog(`[SUPPORTER REMOVED] ${user.toString()} has been added by ${msg.author.toString()}`);
+        this.addLog(`[SUPPORTER REMOVED] ${client.users.cache.get(user.id).tag} has been added by ${msg.author.tag}`);
     }
     
     async updateSupportersEmbed(msg, img?) {
