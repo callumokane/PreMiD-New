@@ -7,6 +7,7 @@ module.exports = {
     config: {
         name: "ticket",
         aliases: [],
+        description: "Ticket commands.",
         slashCommand: true
     }, run: async (data, perms) => {
         switch (data.data.options[0].name) {

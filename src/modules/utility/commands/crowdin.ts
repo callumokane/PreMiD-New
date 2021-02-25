@@ -9,6 +9,7 @@ module.exports = {
     config: {
         name: "crowdin",
         aliases: [],
+        description: "Crowdin commmands.",
         slashCommand: true
     },
     run: async (data) => {

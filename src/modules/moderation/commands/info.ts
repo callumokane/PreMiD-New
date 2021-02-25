@@ -5,6 +5,7 @@ module.exports = {
     config: {
         name: "info",
         aliases: [],
+        description: "Shortcuts to get things done faster.",
         slashCommand: true
     },
     run: async (data) => {

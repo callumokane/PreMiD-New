@@ -2,6 +2,7 @@ module.exports = {
     config: {
         name: "ping",
         aliases: [],
+        description: "Returns the bot's ping.",
         slashCommand: true
     },
     run: (data, _, client) => {

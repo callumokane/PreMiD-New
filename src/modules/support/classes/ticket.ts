@@ -79,7 +79,7 @@ export class Ticket {
             });
 
             cancel.on("collect", _ => {
-                (client.channels.cache.get(client.config.channels.supportChannel) as TextChannel).permissionOverwrites.get(this.user.id)?.delete();
+                (client.channels.cache.get(client.config.channels.supportChannel) as TextChannel).permissionOverwrites.get(this.userId)?.delete();
                 msg.delete();
             })
         } else {
@@ -131,7 +131,7 @@ export class Ticket {
 
     delete(closer, msg) {
         client.users.cache.get(this.userId).send(`Your ticket (\`${this.id}\`) has been rejected by <@${closer.id}>`);
-        (client.channels.cache.get(client.config.channels.supportChannel) as TextChannel).permissionOverwrites.get(this.user.id)?.delete();
+        (client.channels.cache.get(client.config.channels.supportChannel) as TextChannel).permissionOverwrites.get(this.userId)?.delete();
         msg.delete();
         coll.findOneAndUpdate({ticketId: this.id}, {$set: {status: 3}});
     }
@@ -215,7 +215,7 @@ export class Ticket {
 
 		this.addLog(`[ACCEPTED] Ticket accepted by ${this.user.user.tag}`);
         sortTickets();
-        coll.findOneAndUpdate({ticketId: this.id}, {$set: {status: 2, channel: channel, supportChannel: channel.id, supporters: [member.id], acceptedAt: Date.now(), supportMessage: msg.id}});
+        coll.findOneAndUpdate({ticketId: this.id}, {$set: {status: 2, supportChannel: channel.id, supporters: [member.id], acceptedAt: Date.now(), supportMessage: msg.id}});
     }
 
     async close(closer, reason?) {
@@ -235,7 +235,7 @@ export class Ticket {
         });
 
         (await (client.channels.cache.get(client.config.channels.ticketChannel) as TextChannel).messages.fetch(this.ticketMessage as string)).delete();
-        (client.channels.cache.get(client.config.channels.supportChannel) as TextChannel).permissionOverwrites.get(this.user.id)?.delete();
+        (client.channels.cache.get(client.config.channels.supportChannel) as TextChannel).permissionOverwrites.get(this.userId)?.delete();
         client.channels.cache.get(this.supportChannel).delete();
 
         coll.findOneAndUpdate({ticketId: this.id}, {$set: {status: 3}});
@@ -265,7 +265,7 @@ export class Ticket {
                 ])
                 .setFooter(`Chat lasted ${moment.duration(moment(Date.now()).diff(moment(this.acceptedAt))).humanize()}`, client.user.avatarURL());
 
-            if(this.attachments.length > 0) embed.addField("Attachments", this.attachments.map(x => `[${x.name}](${x.url})`).join(", "));
+            if(this.attachments.length > 0) embed.addField("Attachments", this.attachments.map(x => `[${x.name}](${x.link})`).join(", "));
 
             webhook.send("", {
                 embeds: [embed],
@@ -311,7 +311,7 @@ export class Ticket {
     async removeSupporter(msg, arg) {
         msg.delete();
 
-        let args = [(arg[1] ? arg[1] : arg[0])], user = msg.mentions.users.first() || client.users.cache.get(args[0]) || msg.guild.members.cache.find(m => m.user.username.toLowerCase() == args[0].toLowerCase()) || await msg.guild.members.fetch(args[0]) || msg.author;
+        let args = [(arg[1] ?? arg[0])], user = msg.mentions.users.first() || client.users.cache.get(args[0]) || msg.guild.members.cache.find(m => m.user.username.toLowerCase() == args[0].toLowerCase()) || await msg.guild.members.fetch(args[0]) || msg.author;
 
         if(this.userId == msg.author.id) return msg.reply("only supporters can remove people from the ticket!");
         if(user.id == this.userId) return msg.reply("you cannot remove the ticket creator!");

@@ -9,7 +9,10 @@ interface Command {
     config: {
         name: string;
         aliases: string[];
-        slashCommand: boolean;
+        description: string;
+        slashCommand?: boolean;
+        hidden?: boolean;
+        permLevel?: number;
     }
     run(client: Client, message: Message, aliases: string[]): void;
 }

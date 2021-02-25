@@ -8,6 +8,7 @@ let coll = client.db.collection("userSettings");
 module.exports = {
     config: {
         name: "preferences",
+        description: "User settings.",
         aliases: [],
         slashCommand: true
     },
